@@ -1,0 +1,35 @@
+name: wxhnotepad
+version: 0.0.1
+cabal-version: >=1.6
+build-type: Custom
+license: BSD3
+license-file: LICENSE
+copyright: 2010 Fernando "Brujo" Benavides
+maintainer: greenmellon@gmail.com
+stability: educational
+homepage: http://github.com/elbrujohalcon/wxhnotepad
+package-url: http://code.haskell.org/wxhnotepad
+bug-reports: http://github.com/elbrujohalcon/wxhnotepad/issues
+synopsis: An example of how to implement a basic notepad with wxHaskell
+description: A program to learn how to implement basic text editing functionality with wxHaskell.  It's not useful itself, the point is to read the code and learn from it ;)
+category: Development, Education, IDE, Editor
+author: Fernando "Brujo" Benavides
+tested-with: GHC ==6.10.3, GHC ==6.10.4
+data-files: LICENSE README
+data-dir: ""
+extra-source-files: Setup.hs
+extra-tmp-files:
+
+source-repository head
+    type:     git
+    location: git://github.com/elbrujohalcon/wxhnotepad.git
+
+Executable wxhnotepad
+    build-depends: base >= 4,                   base < 5,
+                   wxcore >=0.11.1,             wxcore < 0.12,
+                   wx >=0.11.1,                 wx < 0.12
+    main-is: Main.hs
+    buildable: True
+    hs-source-dirs: src
+    other-modules: 
+    ghc-options: -fwarn-unused-imports -fwarn-missing-fields -fwarn-incomplete-patterns
