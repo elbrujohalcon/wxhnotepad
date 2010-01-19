@@ -39,4 +39,6 @@ gui =
         menuAbout mnuHelp [on command := say "About wxHNotepad" "Author: Fernando Brujo Benavides\nWebsite: http://github.com/elbrujohalcon/wxhnotepad"]
         
         -- and... RUN, FORREST!!
-        set win [menuBar := [mnuSteps, mnuHelp]]
+        set win [menuBar := [mnuSteps, mnuHelp],
+                 visible := True,
+                 clientSize := sz 0 0]
