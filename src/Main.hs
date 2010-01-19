@@ -40,5 +40,6 @@ gui =
         
         -- and... RUN, FORREST!!
         set win [menuBar := [mnuSteps, mnuHelp],
-                 visible := True,
-                 clientSize := sz 0 0]
+                 visible := True, clientSize := sz 0 0]
+                 --HACK: Linux and Windows do not support invisible windows with menuBars on them
+                 --      Then, we need to "show" a really small window instead.
