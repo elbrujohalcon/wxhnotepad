@@ -26,8 +26,8 @@ source-repository head
 
 Executable wxhnotepad
     build-depends: base >= 4,                   base < 5,
-                   wxcore >=0.11.1,             wxcore < 0.12,
-                   wx >=0.11.1,                 wx < 0.12
+                   wxcore >=0.11.1,             wxcore < 0.13,
+                   wx >=0.11.1,                 wx < 0.13
     main-is: Main.hs
     buildable: True
     hs-source-dirs: src
