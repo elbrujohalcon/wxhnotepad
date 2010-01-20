@@ -16,7 +16,7 @@ step2 =
     do
         -- First, we create a hidden window.  We'll make it visible on the
         -- last step
-        win <- frame [text := "wxhNotepad - Step 1", visible := False]
+        win <- frame [text := "wxhNotepad - Step 2", visible := False]
 
         -- We create the editor
         editor <- textCtrl win [font := fontFixed, -- not really needed, but I like it :)
@@ -78,6 +78,8 @@ openPage GUICtx{guiWin = win, guiEditor = editor, guiFile = filePath} =
                 do
                     -- We put the text on the box
                     textCtrlLoadFile editor path
+                    -- Usually, you want to see the name of the file in the window title
+                    set win [text := "wxhnotepad - " ++ path]
                     -- and set the path in our variable
                     varSet filePath $ Just path
 
@@ -96,6 +98,8 @@ savePageAs GUICtx{guiWin = win, guiEditor = editor, guiFile = filePath} =
                 do
                     -- We send the text to the file...
                     textCtrlSaveFile editor path
+                    -- Usually, you want to see the name of the file in the window title
+                    set win [text := "wxhnotepad - " ++ path]
                     -- and set the path in our variable
                     varSet filePath $ Just path
 
