@@ -14,12 +14,9 @@ data GUIContext = GUICtx { guiWin    :: Frame (),
 step2 :: IO ()
 step2 =
     do
-        -- First, we create a hidden window.  We'll make it visible on the
-        -- last step
         win <- frame [text := "wxhNotepad - Step 2", visible := False]
 
-        -- We create the editor
-        editor <- textCtrl win [font := fontFixed, -- not really needed, but I like it :)
+        editor <- textCtrl win [font := fontFixed,
                                 text := "Now the user can open a file, save it" ++
                                         "or save it with another name.\n" ++
                                         "Our program is smart enough to remember" ++
@@ -28,8 +25,6 @@ step2 =
                                         "filesystem errors here.  That's left " ++
                                         "as a homework for you :P"]
         
-        -- We create a var to hold the path of the current file.
-        -- It'll become useful on save 
         filePath <- varCreate Nothing
 
         -- We define the context to use it on every event handling function
@@ -51,15 +46,9 @@ step2 =
         -- And finally we add the bar to the window
         set win [menuBar := [mnuFile]]
 
-        -- A simple layout: The whole window filled with the textbox
-        --                  with a starting size of 640x480
         set win [layout := fill $ widget editor,
                  clientSize := sz 640 480]
-        
-        -- Finally we set the focus on the editor
         focusOn editor
-
-        -- HEY, HO... LET'S GO!!
         set win [visible := True]
 
 savePageAs, savePage, openPage :: GUIContext -> IO ()
