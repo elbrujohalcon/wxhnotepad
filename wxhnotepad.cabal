@@ -1,5 +1,5 @@
 name: wxhnotepad
-version: 1.0.0
+version: 0.0.1
 cabal-version: >=1.6
 build-type: Custom
 license: BSD3
@@ -34,5 +34,5 @@ Executable wxhnotepad
     main-is: Main.hs
     buildable: True
     hs-source-dirs: src
-    other-modules: 
+    other-modules:  Step1, Step2, Step3, Step4, Step5, Step6
     ghc-options: -fwarn-unused-imports -fwarn-missing-fields -fwarn-incomplete-patterns
