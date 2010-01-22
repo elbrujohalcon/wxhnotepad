@@ -11,6 +11,7 @@ import Step2
 import Step3
 import Step4
 import Step5
+import Step6
 
 -- | The application entry point
 main :: IO ()
@@ -35,8 +36,7 @@ gui =
         menuItem mnuSteps [on command := step3, text := "Step &3 - Undo / Redo...\tCtrl-3"]
         menuItem mnuSteps [on command := step4, text := "Step &4 - Cut / Copy / Paste...\tCtrl-4"]
         menuItem mnuSteps [on command := step5, text := "Step &5 - Find / Replace...\tCtrl-5"]
-        menuItem mnuSteps [text := "Step &5\tCtrl-6", on command := say "Step 6" "Toolbar / Statusbar / Context Menus"]
-        menuItem mnuSteps [text := "Step &6\tCtrl-7", on command := say "Step 7" "Preferences..."]
+        menuItem mnuSteps [on command := step6, text := "Step &6 - Toolbar / Statusbar / Context Menus\tCtrl-6"]
         menuQuit mnuSteps [on command := wxcAppExit]
 
         -- the simplest about page...

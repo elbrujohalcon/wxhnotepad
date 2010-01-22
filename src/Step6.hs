@@ -1,5 +1,5 @@
--- | Like Step4 but with Find / Replace support
-module Step5 (step5) where
+-- | Like Step5 but with Toolbar, Statusbar and Context Menus
+module Step6 (step6) where
 
 import Graphics.UI.WX
 import Graphics.UI.WXCore hiding (wxID_CUT, wxID_COPY, wxID_PASTE,
@@ -7,8 +7,8 @@ import Graphics.UI.WXCore hiding (wxID_CUT, wxID_COPY, wxID_PASTE,
 import Data.Bits
 import Data.Char (toLower)
 import Data.List
+import Paths_wxhnotepad -- That's the cabal way of finding the image paths
 
--- | /FRFlags/ represents what the user choose in the FindReplaceDialog
 data FRFlags = FRFlags {frfGoingDown :: Bool,
                         frfMatchCase :: Bool,
                         frfWholeWord :: Bool,
@@ -21,7 +21,8 @@ data GUIContext = GUICtx { guiWin    :: Frame (),
                            guiTimer  :: Var (TimerEx ()),
                            guiPast   :: Var [String],
                            guiFuture :: Var [String],
-                           guiSearch :: FindReplaceData () -- ^ Needed to hold the what the user is looking for
+                           guiSearch :: FindReplaceData (),
+                           guiStatus :: StatusField -- ^ We'll use just one status field for now
                            }
 
 wxID_MYUNDO, wxID_MYREDO, wxID_CUT, wxID_COPY, wxID_PASTE,
@@ -31,40 +32,53 @@ wxID_MYREDO = 5109
 wxID_CUT    = 5031
 wxID_COPY   = 5032
 wxID_PASTE  = 5033
-wxID_FIND       = 5035  --HACK: They're not correctly numbered in WxcDefs or they
-wxID_REPLACE    = 5038  --      don't even exist
+wxID_FIND       = 5035
+wxID_REPLACE    = 5038
 wxID_FORWARD    = 5106
 wxID_BACKWARD   = 5107
 
-step5 :: IO ()
-step5 =
+step6 :: IO ()
+step6 =
     do
-        win <- frame [text := "wxhNotepad - Step 5", visible := False]
+        win <- frame [text := "wxhNotepad - Step 6", visible := False]
         editor <- textCtrl win [font := fontFixed,
-                                text := "Find / Replace functionality is supported " ++
-                                        "by wxHaskell but it's kinda hidden in " ++
-                                        "WXCore.  We'll need a little digging for " ++
-                                        "this step.\n" ++
-                                        "This step involved tons of code, so I " ++
-                                        "think there must be a better way to do it." ++
-                                        "If you find it, please post it on the " ++
-                                        "wxhaskell-users mailing list :)"]
+                                text := "Now we have a fully functional text " ++
+                                        "editor, so let's decorate it a bit." ++
+                                        "In this step we add toolbar, statusbar " ++
+                                        "and context menues to our application.\n" ++
+                                        "For the toolbar, we choose a particular " ++
+                                        "set of images from SphericalIcons Set by " ++
+                                        "Ahmad Hania (http://www.iconfinder.net/search/?q=iconset:sphericalcons) " ++
+                                        "and we put those in the cabal package " ++
+                                        "description.  We mention that because " ++
+                                        "it's one thing to do besides this module.\n" ++
+                                        "In this tutorial we'll use the statusbar " ++
+                                        "just to show a couple of dummy messages, " ++
+                                        "your homework is to add smart things to " ++
+                                        "it, like a Line/Coulmn position marker."]
         filePath <- varCreate Nothing
         refreshTimer <- timer win [interval   := 1000000,
                                    on command := return ()]
         varTimer <- varCreate refreshTimer
         past <- varCreate []
         future <- varCreate []
-        -- We create a FindReplaceData that will hold the information about the
-        -- last search
         search <- findReplaceDataCreate wxFR_DOWN
-        let guiCtx = GUICtx win editor filePath varTimer past future search
+
+        -- We create a status field where we'll put just text messages
+        status <- statusField [text := "hello, this is wxhNotepad... happy editing :)"]
+        -- The window statusbar is a list of status fields, we use just one
+        set win [statusBar := [status]]
         
-        set editor [on keyboard := \_ -> restartTimer guiCtx >> propagateEvent]
+        let guiCtx = GUICtx win editor filePath varTimer past future search status
+        
+        set editor [on keyboard := \_ -> restartTimer guiCtx >> propagateEvent,
+                    -- We associate the right click on the editor to a context menu launcher
+                    on mouse :=  \e -> case e of
+                                            MouseRightDown _ _ -> contextMenu guiCtx
+                                            _ -> propagateEvent]
+
         updatePast guiCtx
         
-        -- We create a menu for the window with the same items from previous steps
-        -- and a couple of new items in the edit menu
         mnuFile <- menuPane [text := "File"]
         mnuEdit <- menuPane [text := "Edit"]
         menuAppend mnuFile wxID_OPEN "&Open...\tCtrl-o" "Open Page" False
@@ -98,6 +112,40 @@ step5 =
         evtHandlerOnMenuCommand win wxID_REPLACE $ findReplace guiCtx
         set win [menuBar := [mnuFile, mnuEdit]]
 
+        -- Once all menues are created, we create the window toolbar
+        tbMain <- toolBarEx win True True []
+        -- As we've created them using WXCore technics we have to find the items
+        -- we want on the toolbar to have them in variables
+        mitOpen <- menuFindItem mnuFile wxID_OPEN
+        mitSave <- menuFindItem mnuFile wxID_SAVE
+        mitSaveAs <- menuFindItem mnuFile wxID_SAVEAS
+        mitClose <- menuFindItem mnuFile wxID_CLOSE
+        mitCut <- menuFindItem mnuEdit wxID_CUT
+        mitCopy <- menuFindItem mnuEdit wxID_COPY
+        mitPaste <- menuFindItem mnuEdit wxID_PASTE
+        mitFind <- menuFindItem mnuEdit wxID_FIND
+        -- We get the paths of the images too
+        openPath <- imageFile "open.png"
+        savePath <- imageFile "save.png"
+        saveAsPath <- imageFile "saveas.png"
+        closePath <- imageFile "close.png"
+        cutPath <- imageFile "cut.png"
+        copyPath <- imageFile "copy.png"
+        pastePath <- imageFile "paste.png"
+        findPath <- imageFile "find.png"
+        -- And finally we build our toolbar
+        toolMenu tbMain mitOpen "Open" openPath [tooltip := "Open Document"]
+        toolMenu tbMain mitSave "Save" savePath [tooltip := "Save Document"]
+        toolMenu tbMain mitSaveAs "Save As..." saveAsPath [tooltip := "Save Document As..."]
+        toolMenu tbMain mitClose "Close" closePath [tooltip := "Close Document"]
+        toolBarAddSeparator tbMain
+        toolMenu tbMain mitCut "Cut" cutPath [tooltip := "Cut"]
+        toolMenu tbMain mitCopy "Copy" copyPath [tooltip := "Copy"]
+        toolMenu tbMain mitPaste "Paste" pastePath [tooltip := "Paste"]
+        toolBarAddSeparator tbMain
+        toolMenu tbMain mitFind "Find..." findPath [tooltip := "Open Find Dialog"]
+        toolBarSetToolBitmapSize tbMain $ sz 32 32
+
         set win [layout := fill $ widget editor,
                  clientSize := sz 640 480]
         focusOn editor
@@ -107,8 +155,12 @@ savePageAs, savePage, openPage,
     undo, redo, restartTimer, killTimer,
     updatePast, clearPast,
     cut, copy, paste,
-    justFind, justFindNext, justFindPrev, findReplace :: GUIContext -> IO ()
-openPage guiCtx@GUICtx{guiWin = win, guiEditor = editor, guiFile = filePath} =
+    justFind, justFindNext, justFindPrev, findReplace,
+    contextMenu :: GUIContext -> IO ()
+openPage guiCtx@GUICtx{guiWin       = win,
+                       guiEditor    = editor,
+                       guiFile      = filePath,
+                       guiStatus    = status} =
     do
         maybePath <- fileOpenDialog win True True "Open file..." [("Haskells (*.hs)",["*.hs"]),
                                                                   ("Texts (*.txt)", ["*.txt"]),
@@ -119,12 +171,20 @@ openPage guiCtx@GUICtx{guiWin = win, guiEditor = editor, guiFile = filePath} =
             Just path ->
                 do
                     clearPast guiCtx
-                    textCtrlLoadFile editor path
+                    fileLoaded <- textCtrlLoadFile editor path
+                    case fileLoaded of
+                        True ->
+                            set status [text := path ++ " loaded succesfully"]
+                        False ->
+                            set status [text := "Couldn't load " ++ path]
                     updatePast guiCtx
                     set win [text := "wxhnotepad - " ++ path]
                     varSet filePath $ Just path
 
-savePageAs GUICtx{guiWin = win, guiEditor = editor, guiFile = filePath} =
+savePageAs GUICtx{guiWin    = win,
+                  guiEditor = editor,
+                  guiFile   = filePath,
+                  guiStatus = status} =
     do
         maybePath <- fileSaveDialog win True True "Save file..." [("Haskells (*.hs)",["*.hs"]),
                                                                   ("Texts (*.txt)", ["*.txt"]),
@@ -134,18 +194,32 @@ savePageAs GUICtx{guiWin = win, guiEditor = editor, guiFile = filePath} =
                 return ()
             Just path ->
                 do
-                    textCtrlSaveFile editor path
+                    fileSaved <- textCtrlSaveFile editor path
+                    case fileSaved of
+                        True ->
+                            set status [text := path ++ " saved succesfully"]
+                        False ->
+                            set status [text := "Couldn't save " ++ path]
                     set win [text := "wxhnotepad - " ++ path]
                     varSet filePath $ Just path
 
-savePage guiCtx@GUICtx{guiWin = win, guiEditor = editor, guiFile = filePath} =
+savePage guiCtx@GUICtx{guiWin   = win,
+                       guiEditor= editor,
+                       guiFile  = filePath,
+                       guiStatus= status} =
     do
         maybePath <- varGet filePath
         case maybePath of
             Nothing ->
                 savePageAs guiCtx
             Just path ->
-                textCtrlSaveFile editor path >> return ()
+                do
+                    fileSaved <- textCtrlSaveFile editor path
+                    case fileSaved of
+                        True ->
+                            set status [text := path ++ " saved succesfully"]
+                        False ->
+                            set status [text := "Couldn't save " ++ path]
                 
 undo guiCtx@GUICtx{guiEditor = editor, guiPast = past, guiFuture = future} =
     do
@@ -196,12 +270,13 @@ clearPast GUICtx{guiPast = past, guiFuture = future} =
         varSet past []
         varSet future []
 
-restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = varTimer} =
+restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = varTimer, guiStatus = status} =
     do
         newRefreshTimer <- timer win [interval := 1000,
                                       on command := updatePast guiCtx]
         refreshTimer <- varSwap varTimer newRefreshTimer
         timerOnCommand refreshTimer $ return ()
+        set status [text := ""]
 
 killTimer GUICtx{guiWin = win, guiTimer = varTimer} =
     do
@@ -216,83 +291,53 @@ cut guiCtx@GUICtx{guiEditor = editor} = textCtrlCut editor >> updatePast guiCtx
 
 paste guiCtx@GUICtx{guiEditor = editor} = textCtrlPaste editor >> updatePast guiCtx
 
--- We open a FindReplaceDialog with default style to let the user choose what to do
 justFind guiCtx = openFindDialog guiCtx "Find..." dialogDefaultStyle
 
 justFindNext guiCtx@GUICtx{guiSearch = search} =
     do
-        -- We get the current search parameters
         curFlags <- findReplaceDataGetFlags search
-        -- We set the finding direction to down
         findReplaceDataSetFlags search $ curFlags .|. wxFR_DOWN
-        -- and we proceed with the search
         findNextButton guiCtx
 
 justFindPrev guiCtx@GUICtx{guiSearch = search} =
     do
-        -- We get the current search parameters
         curFlags <- findReplaceDataGetFlags search
-        -- We set the finding direction to down
         findReplaceDataSetFlags search $ curFlags .&. complement wxFR_DOWN
-        -- and we proceed with the search
         findNextButton guiCtx
 
--- We open a FindReplaceDialog with replace style
 findReplace guiCtx = openFindDialog guiCtx "Find and Replace..." $ dialogDefaultStyle .|. wxFR_REPLACEDIALOG
 
--- | Auxiliary function to build a /FRFlags/
-buildFRFlags :: Bool    -- ^ Wrap the Search?
-                -> Int  -- ^ BitMask for Direction, Match Case and Whole Word flags
-                -> IO FRFlags
+buildFRFlags :: Bool -> Int -> IO FRFlags
 buildFRFlags w x = return FRFlags {frfGoingDown = (x .&. wxFR_DOWN) /= 0,
                                    frfMatchCase = (x .&. wxFR_MATCHCASE) /= 0,
                                    frfWholeWord = (x .&. wxFR_WHOLEWORD) /= 0,
                                    frfWrapSearch = w}
 
--- | Opens a FindReplace Dialog
-openFindDialog :: GUIContext    -- ^ The current GUIContext
-                  -> String     -- ^ The title of the dialog
-                  -> Int        -- ^ The style of the dialog
-                  -> IO ()
+openFindDialog :: GUIContext -> String -> Int -> IO ()
 openFindDialog guiCtx@GUICtx{guiWin = win,
                              guiSearch = search} title dlgStyle =
     do
-        -- First we must create a dialog with the search parameters that we
-        -- already have.  The dialog itself is going to modify them according
-        -- to the user selections
         frdialog <- findReplaceDialogCreate win search title $ dlgStyle + wxFR_NOWHOLEWORD
-        -- One of the weirdest functions on wxHaskell is windowOnEvent.
-        -- I did not really understand what are the parameters for exactly, but
-        -- if we use it this way, we manage to get a certain event with id k to
-        -- fire the function f... :)
         let winSet k f = let hnd _ = f guiCtx >> propagateEvent
                           in windowOnEvent frdialog [k] hnd hnd
-        -- Using that magic trick, we associate our functions with the button
-        -- pressing events in the dialog...
         winSet wxEVT_COMMAND_FIND findNextButton
         winSet wxEVT_COMMAND_FIND_NEXT findNextButton
         winSet wxEVT_COMMAND_FIND_REPLACE findReplaceButton
         winSet wxEVT_COMMAND_FIND_REPLACE_ALL findReplaceAllButton
-        -- And... it's showtime!!
         set frdialog [visible := True]
 
--- These 3 functions handle the button events in the dialog but also handle the
--- menuitems when the dialog is not there
 findNextButton, findReplaceButton, findReplaceAllButton :: GUIContext -> IO ()
 findNextButton guiCtx@GUICtx{guiEditor= editor,
                              guiWin   = win,
                              guiSearch= search} =
     do
-        -- We check what the user is trying to find
         s <- findReplaceDataGetFindString search
-        -- We parse it, assuming that the user wants to wrap its search
         fs <- findReplaceDataGetFlags search >>= buildFRFlags True
-        -- We try to find a match in the text
         mip <- findMatch s fs editor
         case mip of
-            Nothing -> -- If there's no match, we inform that to the user
+            Nothing ->
                 infoDialog win "Find Results" $ s ++ " not found."
-            Just ip -> -- If there's a match, we select that text
+            Just ip ->
                 do
                     textCtrlSetInsertionPoint editor ip
                     textCtrlSetSelection editor ip (length s + ip)
@@ -302,87 +347,59 @@ findReplaceButton guiCtx@GUICtx{guiEditor   = editor,
                                 guiWin      = win,
                                 guiSearch   = search} =
     do
-        -- We check what the user is trying to find
         s <- findReplaceDataGetFindString search
-        -- and what is he wanting to replace it with
         r <- findReplaceDataGetReplaceString search
-        -- We parse it, assuming that the user wants to wrap its search
         fs <- findReplaceDataGetFlags search >>= buildFRFlags True
-        -- We try to find a match in the text
         mip <- findMatch s fs editor
         case mip of
-            Nothing -> -- If there's no match, we inform that to the user
+            Nothing ->
                 infoDialog win "Find Results" $ s ++ " not found."
             Just ip ->
-                do -- If there's a match, we replace that text
+                do
                     textCtrlReplace editor ip (length s + ip) r
-                    -- select the result
                     textCtrlSetInsertionPoint editor ip
                     textCtrlSetSelection editor ip (length r + ip)
-                    -- and finally update the history
                     updatePast guiCtx
         
 findReplaceAllButton guiCtx@GUICtx{guiEditor = editor,
                                    guiSearch = search} =
     do
-        -- We check what the user is trying to find
         s <- findReplaceDataGetFindString search
-        -- and what is he wanting to replace it with
         r <- findReplaceDataGetReplaceString search
-        -- We parse it, assuming that the user wants to wrap its search
-        -- Note that we're NOT wrapping our search, to avoid infinite looping
         fs <- findReplaceDataGetFlags search >>= buildFRFlags False
-        -- We start at the beginning of the text
         textCtrlSetInsertionPoint editor 0
-        -- And we go through the text replacing s by r until there's nothing
-        --  more to replace
         replaceAllIn s r fs editor
-        -- and finally update the history
         updatePast guiCtx
     where replaceAllIn s r fs editor =
             do
                 mip <- findMatch s fs editor
                 case mip of
                     Nothing ->
-                        return () -- we're done here
+                        return ()
                     Just ip ->
                         do
                             textCtrlReplace editor ip (length s + ip) r
                             textCtrlSetInsertionPoint editor $ length r + ip
-                            replaceAllIn s r fs editor -- we look for the next match
+                            replaceAllIn s r fs editor
 
--- | Tries to find a string in a text control
-findMatch :: String -- ^ The string to find
-             -> FRFlags -- ^ The flags to know how to look for it
-             -> TextCtrl () -- ^ The textControl
-             -> IO (Maybe Int) -- ^ Nothing or Just the position of the first match
+findMatch :: String -> FRFlags -> TextCtrl () -> IO (Maybe Int)
 findMatch query flags editor =
     do
-        -- We get the current text
         txt <- get editor text
-        -- and the insertion point (that's where the search begins)
         ip <- textCtrlGetInsertionPoint editor
-        -- If we're not required to match the case we move everything to lower
         let (substring, string) = if frfMatchCase flags
                                     then (query, txt)
                                     else (map toLower query, map toLower txt)
-            -- we choose what function to use depending on the direction
             funct = if frfGoingDown flags
                         then nextMatch (ip + 1)
                         else prevMatch ip
             (mip, wrapped) = funct substring string
-        -- if it had to wrap around and that was 'forbbiden', then the match didn't happen
-        -- otherwise, the result is valid
         return $ if (not $ frfWrapSearch flags) && wrapped
                     then Nothing
                     else mip
 
--- These functions try to find a string contained in another
-prevMatch, nextMatch :: Int -- ^ Starting point
-                        -> String -- ^ What to find
-                        -> String -- ^ Where to find it
-                        -> (Maybe Int, Bool) -- ^ (Nothing or Just the point where it was found, It needed to wrap around?)
-prevMatch _ [] _ = (Nothing, True) -- When looking for nothing, that's what you get
+prevMatch, nextMatch :: Int -> String -> String -> (Maybe Int, Bool)
+prevMatch _ [] _ = (Nothing, True)
 prevMatch from substring string | length string < from || from <= 0 = prevMatch (length string) substring string
                                 | otherwise =
                                         case nextMatch (fromBack from) (reverse substring) (reverse string) of
@@ -390,7 +407,7 @@ prevMatch from substring string | length string < from || from <= 0 = prevMatch 
                                             (Just ri, wrapped) -> (Just $ fromBack (ri + length substring), wrapped)
     where fromBack x = length string - x
 
-nextMatch _ [] _ = (Nothing, True) -- When looking for nothing, that's what you get
+nextMatch _ [] _ = (Nothing, True)
 nextMatch from substring string | length substring > length string = (Nothing, True)
                                 | length string <= from = nextMatch 0 substring string
                                 | otherwise =
@@ -408,3 +425,32 @@ nextMatch from substring string | length substring > length string = (Nothing, T
     
 indexOf :: String -> String -> Maybe Int
 indexOf substring string = findIndex (isPrefixOf substring) $ tails string
+
+contextMenu guiCtx@GUICtx{guiWin = win, guiEditor = editor} =
+    do
+        -- We create the context menu, which is just a menuPane
+        contextMenu <- menuPane []
+        -- We'll present cut/copy items only if there's some text selected
+        sel <- textCtrlGetStringSelection editor
+        case sel of
+            "" -> -- If nothing is selected we let the event propagate
+                return ()
+            _ ->
+                do
+                    menuAppend contextMenu wxID_CUT "C&ut\tCtrl-x" "Cut" False
+                    menuAppend contextMenu wxID_COPY "&Copy\tCtrl-c" "Copy" False
+        -- We always add the paste item
+        menuAppend contextMenu wxID_PASTE "&Paste\tCtrl-v" "Paste" False
+        -- We propagate the event so the menu presentation is the last thing to happen
+        propagateEvent
+        -- We detect the position in the screen where the mouse is pointing
+        pointWithinWindow <- windowGetMousePosition win
+        -- And we make the menu pop up
+        menuPopup contextMenu pointWithinWindow win
+        -- Finally, we delete the menu
+        objectDelete contextMenu
+
+-- | This function takes a name and, with a little knowlegde and the help of
+--   cabal, returns the path of that image
+imageFile :: String -> IO FilePath
+imageFile img = getDataFileName $ "res/images/" ++ img
