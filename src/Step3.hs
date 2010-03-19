@@ -7,7 +7,7 @@ import Graphics.UI.WXCore
 data GUIContext = GUICtx { guiWin    :: Frame (),
                            guiEditor :: TextCtrl (),
                            guiFile   :: Var (Maybe FilePath),
-                           guiTimer  :: Var (TimerEx ()), -- ^ A timer to detect user actions
+                           guiTimer  :: TimerEx (),       -- ^ A timer to detect user actions
                            guiPast   :: Var [String],     -- ^ For Undo history
                            guiFuture :: Var [String]      -- ^ For Redo history
                            }
@@ -43,14 +43,15 @@ step3 =
 
         -- We create a timer to detect user actions.  This way we'll not undo/redo
         -- every character
-        refreshTimer <- timer win [interval   := 1000000,   -- 1000 secs. means a *lot* of time
-                                   on command := return ()] -- just start over
-        varTimer <- varCreate refreshTimer
-
+        refreshTimer <- timer win []
+        
         -- We define the context to use it on every event handling function
         past <- varCreate []
         future <- varCreate []
-        let guiCtx = GUICtx win editor filePath varTimer past future
+        let guiCtx = GUICtx win editor filePath refreshTimer past future
+        
+        -- We set the command associated to the timer (but we didn't start it yet)
+        timerOnCommand refreshTimer $ updatePast guiCtx 
         
         -- We associate the events on the editor with commands that populate undo/redo history
         set editor [on keyboard := \_ -> restartTimer guiCtx >> propagateEvent]
@@ -185,27 +186,19 @@ clearPast GUICtx{guiPast = past, guiFuture = future} =
         varSet past []
         varSet future []
 
-restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = varTimer} =
-    do
-        -- The user did something, we start a 1sec timer that will modify history
+restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = refreshTimer} =
+        -- The user did something, we start our timer with a 1sec interval and
+        -- a one-shot type so it will run just once and then it will modify history
         -- if the user doesn't do anything in that sec.  If the user does another
         -- thing, then the timer will be restarted again and so on so far until
         -- the first sec of inactivity
-        -- Note by FernandoBenavides:
-        -- I really don't know if this can't be done with just one timer
-        -- I didn't find something like "timerRestart ..."
-        newRefreshTimer <- timer win [interval := 1000,
-                                      on command := updatePast guiCtx]
-        refreshTimer <- varSwap varTimer newRefreshTimer
-        timerOnCommand refreshTimer $ return ()
-
-killTimer GUICtx{guiWin = win, guiTimer = varTimer} =
     do
-        -- We kill the timer till there's new notices
-        -- Note by FernandoBenavides:
-        -- I really don't know if this can't be done with just one timer
-        -- I didn't find something like "timerRestart ..."
-        newRefreshTimer <- timer win [interval := 1000000,
-                                      on command := return ()]
-        refreshTimer <- varSwap varTimer newRefreshTimer
-        timerOnCommand refreshTimer $ return ()
+        started <- timerStart refreshTimer 1000 True
+        if started
+            then return ()
+            else do
+                    errorDialog win "Error" "Can't start more timers"
+                    wxcAppExit
+
+-- We kill the timer till there's new notices
+killTimer GUICtx{guiTimer = refreshTimer} = timerStop refreshTimer

@@ -18,7 +18,7 @@ data FRFlags = FRFlags {frfGoingDown :: Bool,
 data GUIContext = GUICtx { guiWin    :: Frame (),
                            guiEditor :: TextCtrl (),
                            guiFile   :: Var (Maybe FilePath),
-                           guiTimer  :: Var (TimerEx ()),
+                           guiTimer  :: TimerEx (),
                            guiPast   :: Var [String],
                            guiFuture :: Var [String],
                            guiSearch :: FindReplaceData () -- ^ Needed to hold the what the user is looking for
@@ -50,17 +50,17 @@ step5 =
                                         "If you find it, please post it on the " ++
                                         "wxhaskell-users mailing list :)"]
         filePath <- varCreate Nothing
-        refreshTimer <- timer win [interval   := 1000000,
-                                   on command := return ()]
-        varTimer <- varCreate refreshTimer
+        refreshTimer <- timer win []
+        
         past <- varCreate []
         future <- varCreate []
         -- We create a FindReplaceData that will hold the information about the
         -- last search
         search <- findReplaceDataCreate wxFR_DOWN
-        let guiCtx = GUICtx win editor filePath varTimer past future search
+        let guiCtx = GUICtx win editor filePath refreshTimer past future search
         
         set editor [on keyboard := \_ -> restartTimer guiCtx >> propagateEvent]
+        timerOnCommand refreshTimer $ updatePast guiCtx
         updatePast guiCtx
         
         -- We create a menu for the window with the same items from previous steps
@@ -196,19 +196,16 @@ clearPast GUICtx{guiPast = past, guiFuture = future} =
         varSet past []
         varSet future []
 
-restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = varTimer} =
+restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = refreshTimer} =
     do
-        newRefreshTimer <- timer win [interval := 1000,
-                                      on command := updatePast guiCtx]
-        refreshTimer <- varSwap varTimer newRefreshTimer
-        timerOnCommand refreshTimer $ return ()
+        started <- timerStart refreshTimer 1000 True
+        if started
+            then return ()
+            else do
+                    errorDialog win "Error" "Can't start more timers"
+                    wxcAppExit
 
-killTimer GUICtx{guiWin = win, guiTimer = varTimer} =
-    do
-        newRefreshTimer <- timer win [interval := 1000000,
-                                      on command := return ()]
-        refreshTimer <- varSwap varTimer newRefreshTimer
-        timerOnCommand refreshTimer $ return ()
+killTimer GUICtx{guiTimer = refreshTimer} = timerStop refreshTimer
 
 copy GUICtx{guiEditor = editor} = textCtrlCopy editor
 

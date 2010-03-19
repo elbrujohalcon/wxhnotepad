@@ -18,7 +18,7 @@ data FRFlags = FRFlags {frfGoingDown :: Bool,
 data GUIContext = GUICtx { guiWin    :: Frame (),
                            guiEditor :: TextCtrl (),
                            guiFile   :: Var (Maybe FilePath),
-                           guiTimer  :: Var (TimerEx ()),
+                           guiTimer  :: TimerEx (),
                            guiPast   :: Var [String],
                            guiFuture :: Var [String],
                            guiSearch :: FindReplaceData (),
@@ -57,9 +57,7 @@ step6 =
                                         "your homework is to add smart things to " ++
                                         "it, like a Line/Coulmn position marker."]
         filePath <- varCreate Nothing
-        refreshTimer <- timer win [interval   := 1000000,
-                                   on command := return ()]
-        varTimer <- varCreate refreshTimer
+        refreshTimer <- timer win []
         past <- varCreate []
         future <- varCreate []
         search <- findReplaceDataCreate wxFR_DOWN
@@ -69,7 +67,7 @@ step6 =
         -- The window statusbar is a list of status fields, we use just one
         set win [statusBar := [status]]
         
-        let guiCtx = GUICtx win editor filePath varTimer past future search status
+        let guiCtx = GUICtx win editor filePath refreshTimer past future search status
         
         set editor [on keyboard := \_ -> restartTimer guiCtx >> propagateEvent,
                     -- We associate the right click on the editor to a context menu launcher
@@ -77,6 +75,7 @@ step6 =
                                             MouseRightDown _ _ -> contextMenu guiCtx
                                             _ -> propagateEvent]
 
+        timerOnCommand refreshTimer $ updatePast guiCtx
         updatePast guiCtx
         
         mnuFile <- menuPane [text := "File"]
@@ -270,20 +269,16 @@ clearPast GUICtx{guiPast = past, guiFuture = future} =
         varSet past []
         varSet future []
 
-restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = varTimer, guiStatus = status} =
+restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = refreshTimer} =
     do
-        newRefreshTimer <- timer win [interval := 1000,
-                                      on command := updatePast guiCtx]
-        refreshTimer <- varSwap varTimer newRefreshTimer
-        timerOnCommand refreshTimer $ return ()
-        set status [text := ""]
+        started <- timerStart refreshTimer 1000 True
+        if started
+            then return ()
+            else do
+                    errorDialog win "Error" "Can't start more timers"
+                    wxcAppExit
 
-killTimer GUICtx{guiWin = win, guiTimer = varTimer} =
-    do
-        newRefreshTimer <- timer win [interval := 1000000,
-                                      on command := return ()]
-        refreshTimer <- varSwap varTimer newRefreshTimer
-        timerOnCommand refreshTimer $ return ()
+killTimer GUICtx{guiTimer = refreshTimer} = timerStop refreshTimer
 
 copy GUICtx{guiEditor = editor} = textCtrlCopy editor
 

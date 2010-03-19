@@ -7,7 +7,7 @@ import Graphics.UI.WXCore hiding (wxID_CUT, wxID_COPY, wxID_PASTE)
 data GUIContext = GUICtx { guiWin    :: Frame (),
                            guiEditor :: TextCtrl (),
                            guiFile   :: Var (Maybe FilePath),
-                           guiTimer  :: Var (TimerEx ()),
+                           guiTimer  :: TimerEx (),
                            guiPast   :: Var [String],
                            guiFuture :: Var [String]
                            }
@@ -30,14 +30,13 @@ step4 =
                                         "Besides, we need to adapt our Undo/Redo " ++
                                         "implementation to these functions.\n"]
         filePath <- varCreate Nothing
-        refreshTimer <- timer win [interval   := 1000000,
-                                   on command := return ()]
-        varTimer <- varCreate refreshTimer
+        refreshTimer <- timer win []
         past <- varCreate []
         future <- varCreate []
-        let guiCtx = GUICtx win editor filePath varTimer past future
+        let guiCtx = GUICtx win editor filePath refreshTimer past future
         
         set editor [on keyboard := \_ -> restartTimer guiCtx >> propagateEvent]
+        timerOnCommand refreshTimer $ updatePast guiCtx
         updatePast guiCtx
         
         -- We create a menu for the window with the same items from steps 2 & 3
@@ -163,19 +162,16 @@ clearPast GUICtx{guiPast = past, guiFuture = future} =
         varSet past []
         varSet future []
 
-restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = varTimer} =
+restartTimer guiCtx@GUICtx{guiWin = win, guiTimer = refreshTimer} =
     do
-        newRefreshTimer <- timer win [interval := 1000,
-                                      on command := updatePast guiCtx]
-        refreshTimer <- varSwap varTimer newRefreshTimer
-        timerOnCommand refreshTimer $ return ()
+        started <- timerStart refreshTimer 1000 True
+        if started
+            then return ()
+            else do
+                    errorDialog win "Error" "Can't start more timers"
+                    wxcAppExit
 
-killTimer GUICtx{guiWin = win, guiTimer = varTimer} =
-    do
-        newRefreshTimer <- timer win [interval := 1000000,
-                                      on command := return ()]
-        refreshTimer <- varSwap varTimer newRefreshTimer
-        timerOnCommand refreshTimer $ return ()
+killTimer GUICtx{guiTimer = refreshTimer} = timerStop refreshTimer
 
 -- We just copy the selected text
 copy GUICtx{guiEditor = editor} = textCtrlCopy editor
