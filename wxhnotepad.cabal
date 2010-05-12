@@ -1,5 +1,5 @@
 name: wxhnotepad
-version: 1.1.0
+version: 1.2.0
 cabal-version: >=1.6
 build-type: Custom
 license: BSD3
@@ -16,7 +16,7 @@ description: A program to learn how to implement basic text editing functionalit
              The program is divided in 6 steps, each one corresponding to a window and a haskell module.  Each step includes what was learnt in the previous one, so Step6 is an almost complete basic text editor.
 category: Development, Education, IDE, Editor
 author: Fernando "Brujo" Benavides
-tested-with: GHC ==6.10.3, GHC ==6.10.4
+tested-with: GHC ==6.12.1
 data-files: LICENSE README
             res/images/*.png
 data-dir: ""
@@ -29,8 +29,8 @@ source-repository head
 
 Executable wxhnotepad
     build-depends: base >= 4,                   base < 5,
-                   wxcore >=0.11.1,             wxcore < 0.13,
-                   wx >=0.11.1,                 wx < 0.13
+                   wxcore >=0.12.1.4,           wxcore < 0.13,
+                   wx >=0.12.1.4,               wx < 0.13
     main-is: Main.hs
     buildable: True
     hs-source-dirs: src

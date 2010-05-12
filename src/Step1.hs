@@ -3,7 +3,6 @@
 module Step1 (step1) where
 
 import Graphics.UI.WX
-import Graphics.UI.WXCore
 
 step1 :: IO ()
 step1 =
