@@ -3,7 +3,7 @@ module Step5 (step5) where
 
 import Graphics.UI.WX
 import Graphics.UI.WXCore hiding (wxID_CUT, wxID_COPY, wxID_PASTE,
-                                  wxID_FIND, wxID_FORWARD, wxID_BACKWARD)
+                                  wxID_FIND, wxID_FORWARD, wxID_REPLACE, wxID_BACKWARD)
 import Data.Bits
 import Data.Char (toLower)
 import Data.List

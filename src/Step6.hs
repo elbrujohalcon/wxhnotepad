@@ -3,7 +3,7 @@ module Step6 (step6) where
 
 import Graphics.UI.WX
 import Graphics.UI.WXCore hiding (wxID_CUT, wxID_COPY, wxID_PASTE,
-                                  wxID_FIND, wxID_FORWARD, wxID_BACKWARD)
+                                  wxID_FIND, wxID_FORWARD, wxID_REPLACE, wxID_BACKWARD)
 import Data.Bits
 import Data.Char (toLower)
 import Data.List
@@ -32,8 +32,8 @@ wxID_MYREDO = 5109
 wxID_CUT    = 5031
 wxID_COPY   = 5032
 wxID_PASTE  = 5033
-wxID_FIND       = 5035
-wxID_REPLACE    = 5038
+wxID_FIND       = 5035   --HACK: They're not correctly numbered in WxcDefs or they
+wxID_REPLACE    = 5038   --      don't even exist
 wxID_FORWARD    = 5106
 wxID_BACKWARD   = 5107
 
